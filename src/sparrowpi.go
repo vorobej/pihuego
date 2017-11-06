@@ -1,16 +1,24 @@
 package main
 
 import (
+	"fmt"
+
 	"github.com/vorobej/pihuego/hue"
 )
 
 func main() {
-	//fmt.Printf("local ip: %v\n", GetLocalIP())
 	var bridge = hue.DiscoverBridge()
 	hue.CreateUser(&bridge)
-	hue.LightsStatus(&bridge)
+	lights, err := hue.LightsStatus(&bridge)
+	if err != nil {
+		fmt.Println("Unable to get lights status: ", err)
+	}
 
-	hue.SetLightState(&bridge, nil)
+	for _, light := range lights {
+		fmt.Printf("%s\n", light)
+	}
+
+	//hue.SetLightState(&bridge, nil)
 
 	/*
 		fmt.Println("starting server...")
