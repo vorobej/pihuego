@@ -14,19 +14,18 @@ func POST(url string, data io.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
+
 	if resp == nil {
 		return nil, fmt.Errorf("response is nil")
 	}
 	if resp.StatusCode != http.StatusOK {
-		resp.Body.Close()
 		return nil, fmt.Errorf("status code is not OK")
 	}
 	bodyBytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		resp.Body.Close()
 		return nil, err
 	}
-	resp.Body.Close()
 	return bodyBytes, nil
 }
 
@@ -42,6 +41,7 @@ func PUT(url string, data io.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("status code is not OK")
 	}
@@ -49,7 +49,6 @@ func PUT(url string, data io.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp.Body.Close()
 	return bodyBytes, nil
 }
 
@@ -60,7 +59,7 @@ func GET(url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("status code is not OK")
 	}
@@ -68,6 +67,5 @@ func GET(url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp.Body.Close()
 	return bodyBytes, nil
 }
