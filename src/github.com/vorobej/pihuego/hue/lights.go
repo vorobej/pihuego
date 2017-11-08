@@ -15,7 +15,7 @@ const (
 
 // Light datastructure for light
 type Light struct {
-	ID    int
+	id    int
 	name  string
 	state LightState
 }
@@ -137,7 +137,7 @@ func LightsStatus(bridge *Bridge) ([]Light, error) {
 		}
 
 		lights[index] = Light{
-			ID:    keyInt,
+			id:    keyInt,
 			name:  lightObject["name"].(string),
 			state: lightState,
 		}
@@ -161,7 +161,8 @@ func SetLightState(bridge *Bridge, light *Light) {
 	if err != nil {
 		fmt.Printf("JSON marshaling is failing: %s", err)
 	}
-	request.PUT(bridge.ip+"/api/"+bridge.username+"/lights/5/state", bytes.NewReader(data))
+	url := fmt.Sprintf("%s/api/%s/lights/%d/state", bridge.ip, bridge.username, light.id)
+	request.PUT(url, bytes.NewReader(data))
 }
 
 // TurnOff method to turn off light
@@ -173,11 +174,16 @@ func (light *Light) TurnOff(bridge *Bridge) {
 	if err != nil {
 		fmt.Printf("JSON marshaling is failing: %s", err)
 	}
-	url := fmt.Sprintf("%s/api/%s/lights/%d/state", bridge.ip, bridge.username, light.ID)
+	url := fmt.Sprintf("%s/api/%s/lights/%d/state", bridge.ip, bridge.username, light.id)
 	request.PUT(url, bytes.NewReader(data))
+}
+
+// ID returns light id
+func (light *Light) ID() int {
+	return light.id
 }
 
 // Prints light info
 func (light Light) String() string {
-	return fmt.Sprintf("id<%d> name<%s> state<%v>", light.ID, light.name, light.state)
+	return fmt.Sprintf("id<%d> name<%s> state<%v>", light.id, light.name, light.state)
 }
