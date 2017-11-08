@@ -15,7 +15,7 @@ const (
 
 // Light datastructure for light
 type Light struct {
-	id    int
+	ID    int
 	name  string
 	state LightState
 }
@@ -127,17 +127,17 @@ func LightsStatus(bridge *Bridge) ([]Light, error) {
 			On:               stateObject["on"].(bool),
 			Reachable:        stateObject["reachable"].(bool),
 			Brightness:       (uint8)(stateObject["bri"].(float64)),
-			Hue:              (uint16)(stateObject["hue"].(float64)),
 			Saturation:       (uint8)(stateObject["sat"].(float64)),
-			Effect:           stateObject["effect"].(string),
+			Hue:              (uint16)(stateObject["hue"].(float64)),
 			ColorTemperature: (uint16)(stateObject["ct"].(float64)),
 			Alert:            stateObject["alert"].(string),
+			Effect:           stateObject["effect"].(string),
 			ColorMode:        stateObject["colormode"].(string),
 			XY:               [2]float64{xy[0].(float64), xy[1].(float64)},
 		}
 
 		lights[index] = Light{
-			id:    keyInt,
+			ID:    keyInt,
 			name:  lightObject["name"].(string),
 			state: lightState,
 		}
@@ -161,11 +161,23 @@ func SetLightState(bridge *Bridge, light *Light) {
 	if err != nil {
 		fmt.Printf("JSON marshaling is failing: %s", err)
 	}
-	fmt.Printf("about to post request %s\n", data)
 	request.PUT(bridge.ip+"/api/"+bridge.username+"/lights/5/state", bytes.NewReader(data))
+}
+
+// TurnOffLight method to turn off light
+func TurnOffLight(bridge *Bridge, light *Light) {
+	var body = setLightStateBody{
+		On: false,
+	}
+	data, err := json.Marshal(body)
+	if err != nil {
+		fmt.Printf("JSON marshaling is failing: %s", err)
+	}
+	url := fmt.Sprintf("%s/api/%s/lights/%d/state", bridge.ip, bridge.username, light.ID)
+	request.PUT(url, bytes.NewReader(data))
 }
 
 // Prints light info
 func (light Light) String() string {
-	return fmt.Sprintf("id<%d> name<%s> state<%v>", light.id, light.name, light.state)
+	return fmt.Sprintf("id<%d> name<%s> state<%v>", light.ID, light.name, light.state)
 }
