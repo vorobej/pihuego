@@ -52,9 +52,9 @@ func turnLigthsOff(bridge *hue.Bridge) bool {
 
 	for _, light := range lights {
 		if lightID == allLights {
-			hue.TurnOffLight(bridge, &light)
+			light.TurnOff(bridge)
 		} else if lightID == light.ID {
-			hue.TurnOffLight(bridge, &light)
+			light.TurnOff(bridge)
 			break
 		}
 	}

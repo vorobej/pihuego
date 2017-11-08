@@ -164,8 +164,8 @@ func SetLightState(bridge *Bridge, light *Light) {
 	request.PUT(bridge.ip+"/api/"+bridge.username+"/lights/5/state", bytes.NewReader(data))
 }
 
-// TurnOffLight method to turn off light
-func TurnOffLight(bridge *Bridge, light *Light) {
+// TurnOff method to turn off light
+func (light *Light) TurnOff(bridge *Bridge) {
 	var body = setLightStateBody{
 		On: false,
 	}
