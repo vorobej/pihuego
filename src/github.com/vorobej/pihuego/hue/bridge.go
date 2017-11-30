@@ -11,6 +11,12 @@ const (
 	bridgeProtocol = "http://"
 )
 
+// Bridge holds internal data for hue bridge
+type Bridge struct {
+	ip       string
+	username string
+}
+
 // DiscoverBridge search for bridge over local network
 func DiscoverBridge() Bridge {
 	if useHardcodedBridge {

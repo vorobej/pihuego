@@ -20,13 +20,13 @@ func main() {
 
 	// TODO load bridge from json file?
 	bridge := hue.DiscoverBridge()
+	hue.CreateUser(&bridge)
 
 	switch os.Args[1] {
 	case "off":
-		fmt.Println("NOT IMPLEMENTED: lights off")
 		turnLigthsOff(&bridge)
 	case "on":
-		fmt.Println("NOT IMPLEMENTED: lights on")
+		turnLightsOn(&bridge)
 	case "list":
 		listLights(&bridge)
 	}
@@ -55,6 +55,35 @@ func turnLigthsOff(bridge *hue.Bridge) bool {
 			light.TurnOff(bridge)
 		} else if lightID == light.ID() {
 			light.TurnOff(bridge)
+			break
+		}
+	}
+	return true
+}
+
+func turnLightsOn(bridge *hue.Bridge) bool {
+	lightID := allLights
+	// check if light id is passed, if not - turn off all
+	if len(os.Args) >= 3 {
+		var err error
+		lightID, err = strconv.Atoi(os.Args[2])
+		if err != nil {
+			lightID = allLights
+		}
+	}
+
+	fmt.Printf("turning off light id<%d>\n", lightID)
+	lights, err := hue.LightsStatus(bridge)
+	if err != nil {
+		fmt.Println("turnLigthsOff: Unable to get lights status: ", err)
+		return false
+	}
+
+	for _, light := range lights {
+		if lightID == allLights {
+			light.TurnOn(bridge)
+		} else if lightID == light.ID() {
+			light.TurnOn(bridge)
 			break
 		}
 	}

@@ -76,8 +76,8 @@ type LightState struct {
 	XY [2]float64 `json:"xy"`
 }
 
-type setLightStateBody struct {
-	On         bool   `json:"on,omitempty"`
+type SetLightStateBody struct {
+	On         bool   `json:"on"`
 	Brightness uint8  `json:"bri,omitempty"`
 	Hue        uint16 `json:"hue,omitempty"`
 	Saturation uint8  `json:"sat,omitempty"`
@@ -152,7 +152,7 @@ func SetLightState(bridge *Bridge, light *Light) {
 		fmt.Printf("SetLightState() invalid arguments: bridge<%p> light<%p>\n", bridge, light)
 		return
 	}
-	var body = setLightStateBody{
+	var body = SetLightStateBody{
 		Hue:        3000,
 		On:         true,
 		Brightness: 200,
@@ -166,16 +166,31 @@ func SetLightState(bridge *Bridge, light *Light) {
 }
 
 // TurnOff method to turn off light
-func (light *Light) TurnOff(bridge *Bridge) {
-	var body = setLightStateBody{
-		On: false,
-	}
-	data, err := json.Marshal(body)
+func (light *Light) TurnOff(bridge *Bridge) error {
+	data, err := json.Marshal(SetLightStateBody{On: false})
 	if err != nil {
 		fmt.Printf("JSON marshaling is failing: %s", err)
 	}
 	url := fmt.Sprintf("%s/api/%s/lights/%d/state", bridge.ip, bridge.username, light.id)
-	request.PUT(url, bytes.NewReader(data))
+	_, err = request.PUT(url, bytes.NewReader(data))
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// TurnOn restore last state of light
+func (light *Light) TurnOn(bridge *Bridge) error {
+	data, err := json.Marshal(SetLightStateBody{On: true})
+	if err != nil {
+		fmt.Printf("JSON marshaling is failing: %s", err)
+	}
+	url := fmt.Sprintf("%s/api/%s/lights/%d/state", bridge.ip, bridge.username, light.id)
+	_, err = request.PUT(url, bytes.NewReader(data))
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // ID returns light id
