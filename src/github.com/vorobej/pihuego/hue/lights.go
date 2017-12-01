@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"strconv"
+	"math"
 
 	"github.com/vorobej/pihuego/hue/request"
 )
@@ -18,6 +18,9 @@ type Light struct {
 	id    int
 	name  string
 	state LightState
+
+	// pointer to bridge where lights are stored TODO remove args from on/off function
+	bridge *Bridge
 }
 
 // LightState current state of light
@@ -77,11 +80,11 @@ type LightState struct {
 }
 
 type SetLightStateBody struct {
-	On         bool   `json:"on"`
-	Brightness uint8  `json:"bri,omitempty"`
-	Hue        uint16 `json:"hue,omitempty"`
-	Saturation uint8  `json:"sat,omitempty"`
-	//XY  list
+	On         bool       `json:"on"`
+	Brightness uint8      `json:"bri,omitempty"`
+	Hue        uint16     `json:"hue,omitempty"`
+	Saturation uint8      `json:"sat,omitempty"`
+	XY         [2]float64 `json:"xy,omitempty"`
 	//ct
 	//alert
 	//effect
@@ -92,58 +95,6 @@ type SetLightStateBody struct {
 	//ct_inc
 	//xy_inc
 
-}
-
-// LightsStatus get status of all lights
-func LightsStatus(bridge *Bridge) ([]Light, error) {
-	if bridge == nil {
-		return nil, fmt.Errorf("bridge can't be nil")
-	}
-	/*
-		resp, err := request.GET(bridge.ip + "/api/" + bridge.username + "/lights")
-		if err != nil {
-			return nil, err
-		}
-		fmt.Println(string(resp))
-		//json.Unmarshal(resp, )
-	else: */
-	resp := []byte(jsonStr)
-	var err error
-
-	var jsonResult map[string]interface{}
-	if err = json.Unmarshal(resp, &jsonResult); err != nil {
-		fmt.Printf("ERROR json: %s\n", err)
-		return nil, err
-	}
-
-	lights := make([]Light, len(jsonResult))
-	var index int
-	for key, value := range jsonResult {
-		keyInt, _ := strconv.Atoi(key)
-		lightObject := value.(map[string]interface{})
-		stateObject := lightObject["state"].(map[string]interface{})
-		xy := stateObject["xy"].([]interface{})
-		lightState := LightState{
-			On:               stateObject["on"].(bool),
-			Reachable:        stateObject["reachable"].(bool),
-			Brightness:       (uint8)(stateObject["bri"].(float64)),
-			Saturation:       (uint8)(stateObject["sat"].(float64)),
-			Hue:              (uint16)(stateObject["hue"].(float64)),
-			ColorTemperature: (uint16)(stateObject["ct"].(float64)),
-			Alert:            stateObject["alert"].(string),
-			Effect:           stateObject["effect"].(string),
-			ColorMode:        stateObject["colormode"].(string),
-			XY:               [2]float64{xy[0].(float64), xy[1].(float64)},
-		}
-
-		lights[index] = Light{
-			id:    keyInt,
-			name:  lightObject["name"].(string),
-			state: lightState,
-		}
-		index++
-	}
-	return lights, nil
 }
 
 // SetLightState set new state to selected light
@@ -161,7 +112,7 @@ func SetLightState(bridge *Bridge, light *Light) {
 	if err != nil {
 		fmt.Printf("JSON marshaling is failing: %s", err)
 	}
-	url := fmt.Sprintf("%s/api/%s/lights/%d/state", bridge.ip, bridge.username, light.id)
+	url := fmt.Sprintf("%s/api/%s/lights/%d/state", bridge.IP, bridge.Username, light.id)
 	request.PUT(url, bytes.NewReader(data))
 }
 
@@ -171,7 +122,7 @@ func (light *Light) TurnOff(bridge *Bridge) error {
 	if err != nil {
 		fmt.Printf("JSON marshaling is failing: %s", err)
 	}
-	url := fmt.Sprintf("%s/api/%s/lights/%d/state", bridge.ip, bridge.username, light.id)
+	url := fmt.Sprintf("%s/api/%s/lights/%d/state", bridge.IP, bridge.Username, light.id)
 	_, err = request.PUT(url, bytes.NewReader(data))
 	if err != nil {
 		return err
@@ -185,11 +136,58 @@ func (light *Light) TurnOn(bridge *Bridge) error {
 	if err != nil {
 		fmt.Printf("JSON marshaling is failing: %s", err)
 	}
-	url := fmt.Sprintf("%s/api/%s/lights/%d/state", bridge.ip, bridge.username, light.id)
+	url := fmt.Sprintf("%s/api/%s/lights/%d/state", bridge.IP, bridge.Username, light.id)
 	_, err = request.PUT(url, bytes.NewReader(data))
 	if err != nil {
 		return err
 	}
+	return nil
+}
+
+// SetColor set color for light
+func (light *Light) SetColor(bridge *Bridge, r, g, b float64) error {
+	var red, green, blue float64
+
+	// apply gamma correction
+	if r > 0.04045 {
+		red = math.Pow((r+0.055)/(1.0/0.055), 2.4)
+	} else {
+		red = r / 12.92
+	}
+	if g > 0.04045 {
+		green = math.Pow((g+0.055)/(1.0+0.055), 2.4)
+	} else {
+		green = g / 12.92
+	}
+	if b > 0.04045 {
+		blue = math.Pow((b+0.055)/(1.0+0.055), 2.4)
+	} else {
+		blue = b / 12.92
+	}
+	fmt.Printf("RGB<%f/%f/%f>\n", red, green, blue)
+
+	// convert rgb to xyz
+	X := red*0.664511 + green*0.154324 + blue*0.162028
+	Y := red*0.283881 + green*0.668433 + blue*0.047685
+	Z := red*0.000088 + green*0.072310 + blue*0.986039
+
+	// calculate xy
+	x := X / (X + Y + Z)
+	y := Y / (X + Y + Z)
+
+	color := SetLightStateBody{On: true, XY: [2]float64{x, y}}
+	data, err := json.Marshal(color)
+	if err != nil {
+		fmt.Printf("JSON marshaling is failing: %s", err)
+	}
+
+	fmt.Println(data)
+	/*
+		url := fmt.Sprintf("%s/api/%s/lights/%d/state", bridge.ip, bridge.username, light.id)
+		_, err = request.PUT(url, bytes.NewReader(data))
+		if err != nil {
+			return err
+		}*/
 	return nil
 }
 

@@ -24,7 +24,7 @@ func CreateUser(bridge *Bridge) (string, error) {
 	}
 
 	if useHardcodedUsername {
-		bridge.username = debugUsername
+		bridge.Username = debugUsername
 		return "", nil
 	}
 
@@ -34,6 +34,6 @@ func CreateUser(bridge *Bridge) (string, error) {
 		fmt.Printf("JSON marshaling is failing: %s", err)
 	}
 	fmt.Printf("about to post request %s\n", data)
-	request.POST(bridge.ip+"/api", bytes.NewReader(data))
+	request.POST(bridge.IP+"/api", bytes.NewReader(data))
 	return "", nil
 }
