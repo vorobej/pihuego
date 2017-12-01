@@ -133,10 +133,10 @@ func lightsHandler(bridge *hue.Bridge, light *hue.Light) error {
 
 // offHandler turn off provided light
 func offHandler(bridge *hue.Bridge, light *hue.Light) error {
-	return light.TurnOff(bridge)
+	return light.TurnOff()
 }
 
 // onHandler turn on provided light
 func onHandler(bridge *hue.Bridge, light *hue.Light) error {
-	return light.TurnOn(bridge)
+	return light.TurnOn()
 }

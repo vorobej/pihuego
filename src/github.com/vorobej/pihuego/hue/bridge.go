@@ -69,9 +69,10 @@ func (bridge *Bridge) Lights() ([]Light, error) {
 		}
 
 		lights[index] = Light{
-			id:    keyInt,
-			name:  lightObject["name"].(string),
-			state: lightState,
+			id:     keyInt,
+			name:   lightObject["name"].(string),
+			state:  lightState,
+			bridge: bridge,
 		}
 		index++
 	}

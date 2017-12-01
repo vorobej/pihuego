@@ -98,11 +98,11 @@ type SetLightStateBody struct {
 }
 
 // SetLightState set new state to selected light
-func SetLightState(bridge *Bridge, light *Light) {
-	if bridge == nil /*|| light == nil */ {
-		fmt.Printf("SetLightState() invalid arguments: bridge<%p> light<%p>\n", bridge, light)
-		return
+func (light *Light) SetLightState() error {
+	if err := verifyLight(light); err != nil {
+		return nil
 	}
+
 	var body = SetLightStateBody{
 		Hue:        3000,
 		On:         true,
@@ -112,17 +112,24 @@ func SetLightState(bridge *Bridge, light *Light) {
 	if err != nil {
 		fmt.Printf("JSON marshaling is failing: %s", err)
 	}
-	url := fmt.Sprintf("%s/api/%s/lights/%d/state", bridge.IP, bridge.Username, light.id)
+	url := fmt.Sprintf("%s/api/%s/lights/%d/state", light.bridge.IP, light.bridge.Username, light.id)
 	request.PUT(url, bytes.NewReader(data))
+	return nil
 }
 
 // TurnOff method to turn off light
-func (light *Light) TurnOff(bridge *Bridge) error {
+func (light *Light) TurnOff() error {
+	if err := verifyLight(light); err != nil {
+		return err
+	}
+
 	data, err := json.Marshal(SetLightStateBody{On: false})
 	if err != nil {
 		fmt.Printf("JSON marshaling is failing: %s", err)
+		return err
 	}
-	url := fmt.Sprintf("%s/api/%s/lights/%d/state", bridge.IP, bridge.Username, light.id)
+
+	url := fmt.Sprintf("%s/api/%s/lights/%d/state", light.bridge.IP, light.bridge.Username, light.id)
 	_, err = request.PUT(url, bytes.NewReader(data))
 	if err != nil {
 		return err
@@ -131,12 +138,18 @@ func (light *Light) TurnOff(bridge *Bridge) error {
 }
 
 // TurnOn restore last state of light
-func (light *Light) TurnOn(bridge *Bridge) error {
+func (light *Light) TurnOn() error {
+	if err := verifyLight(light); err != nil {
+		return err
+	}
+
 	data, err := json.Marshal(SetLightStateBody{On: true})
 	if err != nil {
 		fmt.Printf("JSON marshaling is failing: %s", err)
+		return err
 	}
-	url := fmt.Sprintf("%s/api/%s/lights/%d/state", bridge.IP, bridge.Username, light.id)
+
+	url := fmt.Sprintf("%s/api/%s/lights/%d/state", light.bridge.IP, light.bridge.Username, light.id)
 	_, err = request.PUT(url, bytes.NewReader(data))
 	if err != nil {
 		return err
@@ -145,7 +158,7 @@ func (light *Light) TurnOn(bridge *Bridge) error {
 }
 
 // SetColor set color for light
-func (light *Light) SetColor(bridge *Bridge, r, g, b float64) error {
+func (light *Light) SetColor(r, g, b float64) error {
 	var red, green, blue float64
 
 	// apply gamma correction
@@ -199,4 +212,15 @@ func (light *Light) ID() int {
 // Prints light info
 func (light Light) String() string {
 	return fmt.Sprintf("id<%d> name<%s> state<%v>", light.id, light.name, light.state)
+}
+
+// verifyLight check if light is not null and have valid bridge
+func verifyLight(light *Light) error {
+	if light == nil {
+		return fmt.Errorf("light is nil")
+	}
+	if light.bridge == nil {
+		return fmt.Errorf("light don't have parent bridge")
+	}
+	return nil
 }
