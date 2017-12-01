@@ -81,12 +81,6 @@ func (bridge *Bridge) Lights() ([]Light, error) {
 
 // DiscoverBridge search for bridge over local network
 func DiscoverBridge() Bridge {
-	if useHardcodedBridge {
-		bridgeIP := "http://10.0.0.57"
-		fmt.Println("DiscoverBridge DEBUG: using hardcoded bridge ip: ", bridgeIP)
-		return Bridge{IP: bridgeIP}
-	}
-
 	service := "239.255.255.250:1900"
 	macAddress, err := net.ResolveUDPAddr("udp4", service)
 	if err != nil {

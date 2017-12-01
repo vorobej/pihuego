@@ -9,8 +9,7 @@ import (
 )
 
 const (
-	debugUsername = "WXb-FX20EDmXTmkRagaWuDMAtz5fKR3SyXKy-FI9"
-	deviceName    = "pihuego#device"
+	deviceName = "pihuego#device"
 )
 
 type createUserBody struct {
@@ -21,11 +20,6 @@ type createUserBody struct {
 func CreateUser(bridge *Bridge) (string, error) {
 	if bridge == nil {
 		return "", fmt.Errorf("bridge can't be nil")
-	}
-
-	if useHardcodedUsername {
-		bridge.Username = debugUsername
-		return "", nil
 	}
 
 	var body = createUserBody{DeviceType: deviceName}

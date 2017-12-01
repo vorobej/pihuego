@@ -159,6 +159,10 @@ func (light *Light) TurnOn() error {
 
 // SetColor set color for light
 func (light *Light) SetColor(r, g, b float64) error {
+	if err := verifyLight(light); err != nil {
+		return err
+	}
+
 	var red, green, blue float64
 
 	// apply gamma correction

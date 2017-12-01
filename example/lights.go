@@ -40,6 +40,12 @@ func main() {
 			handler:       lightsHandler,
 			requireBridge: true,
 		},
+		"discover": {
+			handler: discoverHandler,
+		},
+		"pair": {
+			handler: pairHandler,
+		},
 		"on": {
 			handler:       onHandler,
 			requireBridge: true,
@@ -47,6 +53,11 @@ func main() {
 		},
 		"off": {
 			handler:       offHandler,
+			requireBridge: true,
+			requireLight:  true,
+		},
+		"color": {
+			handler:       colorHandler,
 			requireBridge: true,
 			requireLight:  true,
 		},
@@ -139,4 +150,24 @@ func offHandler(bridge *hue.Bridge, light *hue.Light) error {
 // onHandler turn on provided light
 func onHandler(bridge *hue.Bridge, light *hue.Light) error {
 	return light.TurnOn()
+}
+
+// discoverHandler discover and save bridge to config
+func discoverHandler(bridge *hue.Bridge, light *hue.Light) error {
+	fmt.Println("NOT IMPLEMENTED: discoverHandler()")
+	// TODO save discovered bridge to config file
+	hue.DiscoverBridge()
+	return nil
+}
+
+// pairHandler authorize and save username for hub
+func pairHandler(bridge *hue.Bridge, light *hue.Light) error {
+	fmt.Println("NOT IMPLEMENTED: pairHandler()")
+	return nil
+}
+
+// colorHandler set color for light
+func colorHandler(bridge *hue.Bridge, light *hue.Light) error {
+	fmt.Println("NOT IMPLEMENTED: colorHandler()")
+	return nil
 }
