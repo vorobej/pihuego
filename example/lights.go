@@ -104,7 +104,9 @@ func main() {
 		}
 	}
 	// TODO check error?
-	cmd.handler(cmdBridge, cmdLight)
+	if err := cmd.handler(cmdBridge, cmdLight); err != nil {
+		fmt.Println(err)
+	}
 }
 
 func usageHandler(bridge *hue.Bridge, light *hue.Light) error {
