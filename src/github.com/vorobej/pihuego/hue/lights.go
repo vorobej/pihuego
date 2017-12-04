@@ -1,7 +1,6 @@
 package hue
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -9,9 +8,7 @@ import (
 	"github.com/vorobej/pihuego/hue/request"
 )
 
-const (
-	jsonStr = `{"1":{"state":{"on":true,"bri":254,"hue":34076,"sat":251,"effect":"none","xy":[0.3144,0.3301],"ct":153,"alert":"select","colormode":"xy","reachable":true},"swupdate":{"state":"noupdates","lastinstall":null},"type":"Extended color light","name":"living room","modelid":"LCT007","manufacturername":"Philips","uniqueid":"00:17:88:01:10:5a:33:78-0b","swversion":"5.50.1.19085"},"3":{"state":{"on":true,"bri":254,"hue":14956,"sat":140,"effect":"none","xy":[0.4571,0.4097],"ct":366,"alert":"select","colormode":"ct","reachable":true},"swupdate":{"state":"noupdates","lastinstall":null},"type":"Extended color light","name":"kitchen","modelid":"LCT007","manufacturername":"Philips","uniqueid":"00:17:88:01:10:55:f2:7c-0b","swversion":"5.50.1.19085"},"4":{"state":{"on":false,"bri":254,"hue":14956,"sat":140,"effect":"none","xy":[0.4571,0.4097],"ct":366,"alert":"select","colormode":"ct","reachable":true},"swupdate":{"state":"noupdates","lastinstall":null},"type":"Extended color light","name":"bedroom","modelid":"LCT007","manufacturername":"Philips","uniqueid":"00:17:88:01:10:5a:45:c6-0b","swversion":"5.50.1.19085"},"5":{"state":{"on":true,"bri":200,"hue":3000,"sat":140,"effect":"none","xy":[0.5182,0.3643],"ct":480,"alert":"select","colormode":"hs","reachable":true},"swupdate":{"state":"noupdates","lastinstall":null},"type":"Extended color light","name":"lightstrip","modelid":"LST002","manufacturername":"Philips","uniqueid":"00:17:88:01:02:af:3b:42-0b","swversion":"5.90.0.19950"}}`
-)
+type byID []Light
 
 // Light datastructure for light
 type Light struct {
@@ -80,11 +77,11 @@ type LightState struct {
 }
 
 type SetLightStateBody struct {
-	On         bool       `json:"on"`
-	Brightness uint8      `json:"bri,omitempty"`
-	Hue        uint16     `json:"hue,omitempty"`
-	Saturation uint8      `json:"sat,omitempty"`
-	XY         [2]float64 `json:"xy,omitempty"`
+	On         bool      `json:"on"`
+	Brightness uint8     `json:"bri,omitempty"`
+	Hue        uint16    `json:"hue,omitempty"`
+	Saturation uint8     `json:"sat,omitempty"`
+	XY         []float64 `json:"xy,omitempty"`
 	//ct
 	//alert
 	//effect
@@ -113,7 +110,11 @@ func (light *Light) SetLightState() error {
 		fmt.Printf("JSON marshaling is failing: %s", err)
 	}
 	url := fmt.Sprintf("%s/api/%s/lights/%d/state", light.bridge.IP, light.bridge.Username, light.id)
-	request.PUT(url, bytes.NewReader(data))
+	data, err = request.PUT(url, data)
+	if err != nil {
+		return err
+	}
+	fmt.Println("SetLightState() response: ", string(data))
 	return nil
 }
 
@@ -130,10 +131,11 @@ func (light *Light) TurnOff() error {
 	}
 
 	url := fmt.Sprintf("%s/api/%s/lights/%d/state", light.bridge.IP, light.bridge.Username, light.id)
-	_, err = request.PUT(url, bytes.NewReader(data))
+	data, err = request.PUT(url, data)
 	if err != nil {
 		return err
 	}
+	fmt.Println("TurnOff() response: ", string(data))
 	return nil
 }
 
@@ -150,10 +152,11 @@ func (light *Light) TurnOn() error {
 	}
 
 	url := fmt.Sprintf("%s/api/%s/lights/%d/state", light.bridge.IP, light.bridge.Username, light.id)
-	_, err = request.PUT(url, bytes.NewReader(data))
+	data, err = request.PUT(url, data)
 	if err != nil {
 		return err
 	}
+	fmt.Println("TurnOn() response: ", string(data))
 	return nil
 }
 
@@ -182,7 +185,6 @@ func (light *Light) SetColor(r, g, b float64) error {
 		blue = b / 12.92
 	}
 	fmt.Printf("RGB<%f/%f/%f>\n", red, green, blue)
-
 	// convert rgb to xyz
 	X := red*0.664511 + green*0.154324 + blue*0.162028
 	Y := red*0.283881 + green*0.668433 + blue*0.047685
@@ -192,19 +194,19 @@ func (light *Light) SetColor(r, g, b float64) error {
 	x := X / (X + Y + Z)
 	y := Y / (X + Y + Z)
 
-	color := SetLightStateBody{On: true, XY: [2]float64{x, y}}
+	// TODO check if light state is on?
+	color := SetLightStateBody{On: true, XY: []float64{x, y}}
 	data, err := json.Marshal(color)
 	if err != nil {
 		fmt.Printf("JSON marshaling is failing: %s", err)
 	}
-
 	fmt.Println(data)
-	/*
-		url := fmt.Sprintf("%s/api/%s/lights/%d/state", bridge.ip, bridge.username, light.id)
-		_, err = request.PUT(url, bytes.NewReader(data))
-		if err != nil {
-			return err
-		}*/
+	url := fmt.Sprintf("%s/api/%s/lights/%d/state", light.bridge.IP, light.bridge.Username, light.id)
+	data, err = request.PUT(url, data)
+	if err != nil {
+		return err
+	}
+	fmt.Println("SetColor() response: ", string(data))
 	return nil
 }
 
@@ -227,4 +229,16 @@ func verifyLight(light *Light) error {
 		return fmt.Errorf("light don't have parent bridge")
 	}
 	return nil
+}
+
+func (a byID) Len() int {
+	return len(a)
+}
+
+func (a byID) Swap(i, j int) {
+	a[i], a[j] = a[j], a[i]
+}
+
+func (a byID) Less(i, j int) bool {
+	return a[i].id < a[j].id
 }

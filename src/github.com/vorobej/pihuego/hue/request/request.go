@@ -1,6 +1,7 @@
 package request
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -10,7 +11,7 @@ import (
 // POST request to bridge IP
 func POST(url string, data io.Reader) ([]byte, error) {
 	fmt.Printf("POST <%s>\n", url)
-	resp, err := http.Post(url, "application/json", data)
+	resp, err := http.Post("http://"+url, "application/json", data)
 	if err != nil {
 		return nil, err
 	}
@@ -30,10 +31,10 @@ func POST(url string, data io.Reader) ([]byte, error) {
 }
 
 // PUT Sends request to bridge IP
-func PUT(url string, data io.Reader) ([]byte, error) {
-	fmt.Printf("PUT <%s>\n", url)
+func PUT(url string, data []byte) ([]byte, error) {
+	fmt.Printf("PUT <%s> data<%s>\n", url, string(data))
 	client := &http.Client{}
-	req, err := http.NewRequest(http.MethodPut, url, data)
+	req, err := http.NewRequest(http.MethodPut, "http://"+url, bytes.NewReader(data))
 	if err != nil {
 		return nil, err
 	}
@@ -55,7 +56,7 @@ func PUT(url string, data io.Reader) ([]byte, error) {
 // GET send get request
 func GET(url string) ([]byte, error) {
 	fmt.Printf("GET <%s>\n", url)
-	resp, err := http.Get(url)
+	resp, err := http.Get("http://" + url)
 	if err != nil {
 		return nil, err
 	}

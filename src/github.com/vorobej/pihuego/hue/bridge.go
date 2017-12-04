@@ -1,19 +1,28 @@
 package hue
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net"
 	"net/url"
+	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/vorobej/pihuego/hue/request"
 )
 
 const (
 	bridgeProtocol = "http://"
 	bridgeFilename = "bridge.dat"
+	deviceName     = "pihuego#device"
 )
+
+type createUserBody struct {
+	DeviceType string `json:"devicetype"`
+}
 
 // Bridge holds internal data for hue bridge
 type Bridge struct {
@@ -30,7 +39,6 @@ func LoadBridges() (bridges []Bridge, err error) {
 	if err = json.Unmarshal(data, &bridges); err != nil {
 		return nil, err
 	}
-
 	return bridges, nil
 }
 
@@ -39,8 +47,10 @@ func (bridge *Bridge) Lights() ([]Light, error) {
 	if bridge == nil {
 		return nil, fmt.Errorf("bridge can't be nil")
 	}
-	resp := []byte(jsonStr)
-	var err error
+	resp, err := request.GET(fmt.Sprintf("%s/api/%s/lights", bridge.IP, bridge.Username)) //[]byte(jsonStr)
+	if err != nil {
+		return nil, err
+	}
 
 	var jsonResult map[string]interface{}
 	if err = json.Unmarshal(resp, &jsonResult); err != nil {
@@ -76,6 +86,7 @@ func (bridge *Bridge) Lights() ([]Light, error) {
 		}
 		index++
 	}
+	sort.Sort(byID(lights))
 	return lights, nil
 }
 
@@ -148,6 +159,30 @@ func DiscoverBridge() Bridge {
 	return result
 }
 
+// Authorize register app with bridge and get username
+func (bridge *Bridge) Authorize() error {
+	if err := verifyBridge(bridge); err != nil {
+		return err
+	}
+
+	var body = createUserBody{DeviceType: deviceName}
+	data, err := json.Marshal(body)
+	if err != nil {
+		return err
+	}
+
+	// TODO check POST response
+	request.POST(bridge.IP+"/api", bytes.NewReader(data))
+	return nil
+}
+
 func (bridge Bridge) String() string {
 	return fmt.Sprintf("ip<%s> username<%s>", bridge.IP, bridge.Username)
+}
+
+func verifyBridge(bridge *Bridge) error {
+	if bridge == nil {
+		return fmt.Errorf("bridge is nil")
+	}
+	return nil
 }
