@@ -16,6 +16,7 @@ example/lights
 example/example
 src/github.com/MichaelTJones/
 src/github.com/acroca/
+src/github.com/cweill/
 src/github.com/fatih/
 src/github.com/golang/
 src/github.com/haya14busa/
