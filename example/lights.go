@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/vorobej/pihuego/hue"
 )
@@ -13,7 +15,7 @@ const (
 	defaultCommand = "usage"
 )
 
-type commandHandler func(bridge *hue.Bridge, light *hue.Light) error
+type commandHandler func(args commandArguments) error
 
 type commmand struct {
 	handler       commandHandler
@@ -21,9 +23,16 @@ type commmand struct {
 	requireLight  bool
 }
 
+type commandArguments struct {
+	bridge *hue.Bridge
+	light  *hue.Light
+	color  string
+}
+
 var bridgeID = flag.Int("bridge", invalidID, "bridge ID")
 var lightID = flag.Int("light", invalidID, "light ID")
 var cmdName = flag.String("cmd", defaultCommand, "command to execute")
+var color = flag.String("color", "", "color to set light to")
 
 func main() {
 	flag.Parse()
@@ -63,9 +72,7 @@ func main() {
 		},
 	}
 
-	var cmdBridge *hue.Bridge
-	var cmdLight *hue.Light
-
+	var args commandArguments
 	cmd, ok := commands[*cmdName]
 	if !ok {
 		fmt.Printf("ERROR: unknown command: %s\n", *cmdName)
@@ -85,37 +92,39 @@ func main() {
 			fmt.Printf("ERROR: bridge id is out of range\n")
 			return
 		}
-		cmdBridge = &bridges[*bridgeID]
+		args.bridge = &bridges[*bridgeID]
 
 		if cmd.requireLight {
 			if *lightID == invalidID {
 				fmt.Printf("ERROR: command<%s> require light id\n", *cmdName)
 				return
 			}
-			lights, err := cmdBridge.Lights()
+			lights, err := args.bridge.Lights()
 			if err != nil {
-				fmt.Printf("ERROR: unable to get lights from bridge<%s>\n", cmdBridge.IP)
+				fmt.Printf("ERROR: unable to get lights from bridge<%s>\n", args.bridge.IP)
 			} else if *lightID >= len(lights) {
 				// TODO print whole list?
 				fmt.Printf("ERROR: light id is out of range\n")
 				return
 			}
-			cmdLight = &lights[*lightID]
+			args.light = &lights[*lightID]
 		}
+		// set color
+		args.color = *color
 	}
 	// TODO check error?
-	if err := cmd.handler(cmdBridge, cmdLight); err != nil {
+	if err := cmd.handler(args); err != nil {
 		fmt.Println(err)
 	}
 }
 
-func usageHandler(bridge *hue.Bridge, light *hue.Light) error {
+func usageHandler(args commandArguments) error {
 	fmt.Printf("you have to provide command name\n")
 	return nil
 }
 
 // bridgesHandler show list of saved bridges
-func bridgesHandler(bridge *hue.Bridge, light *hue.Light) error {
+func bridgesHandler(args commandArguments) error {
 	bridges, err := hue.LoadBridges()
 	if err != nil {
 		return fmt.Errorf("can't load bridges: %s", err)
@@ -132,9 +141,9 @@ func bridgesHandler(bridge *hue.Bridge, light *hue.Light) error {
 }
 
 // lightsHandler show list of lights available on bridge
-func lightsHandler(bridge *hue.Bridge, light *hue.Light) error {
+func lightsHandler(args commandArguments) error {
 	fmt.Println("#### Available lights:")
-	lights, err := bridge.Lights()
+	lights, err := args.bridge.Lights()
 	if err != nil {
 		return err
 	}
@@ -145,17 +154,17 @@ func lightsHandler(bridge *hue.Bridge, light *hue.Light) error {
 }
 
 // offHandler turn off provided light
-func offHandler(bridge *hue.Bridge, light *hue.Light) error {
-	return light.TurnOff()
+func offHandler(args commandArguments) error {
+	return args.light.TurnOff()
 }
 
 // onHandler turn on provided light
-func onHandler(bridge *hue.Bridge, light *hue.Light) error {
-	return light.TurnOn()
+func onHandler(args commandArguments) error {
+	return args.light.TurnOn()
 }
 
 // discoverHandler discover and save bridge to config
-func discoverHandler(bridge *hue.Bridge, light *hue.Light) error {
+func discoverHandler(args commandArguments) error {
 	fmt.Println("NOT IMPLEMENTED: discoverHandler()")
 	// TODO save discovered bridge to config file
 	hue.DiscoverBridge()
@@ -163,13 +172,46 @@ func discoverHandler(bridge *hue.Bridge, light *hue.Light) error {
 }
 
 // pairHandler authorize and save username for hub
-func pairHandler(bridge *hue.Bridge, light *hue.Light) error {
+func pairHandler(args commandArguments) error {
 	fmt.Println("NOT IMPLEMENTED: pairHandler()")
 	return nil
 }
 
 // colorHandler set color for light
-func colorHandler(bridge *hue.Bridge, light *hue.Light) error {
-	fmt.Println("NOT IMPLEMENTED: colorHandler()")
-	return nil
+func colorHandler(args commandArguments) error {
+	r, g, b, err := extractColor(*color)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("set color to r<%f> g<%f> b<%f>\n", r, g, b)
+	return args.light.SetColor(r, g, b)
+}
+
+// extractColor get rgb color from string. note string should starts with 0x and should have 8 chars, ie 0xDEADBEAF
+func extractColor(color string) (r, g, b float64, err error) {
+	if len(color) != 8 {
+		err = fmt.Errorf("invalid color length")
+		return
+	}
+	if !strings.HasPrefix(color, "0x") {
+		err = fmt.Errorf("color should starts from 0x")
+		return
+	}
+	intR, err := strconv.ParseInt(color[2:4], 16, 64)
+	if err != nil {
+		return
+	}
+	intG, err := strconv.ParseInt(color[4:6], 16, 64)
+	if err != nil {
+		return
+	}
+	intB, err := strconv.ParseInt(color[6:8], 16, 64)
+	if err != nil {
+		return
+	}
+
+	r = float64(intR) / 255.0
+	g = float64(intG) / 255.0
+	b = float64(intB) / 255.0
+	return
 }
