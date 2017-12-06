@@ -200,7 +200,7 @@ func (light *Light) SetColor(r, g, b float64) error {
 	if err != nil {
 		fmt.Printf("JSON marshaling is failing: %s", err)
 	}
-	fmt.Println(data)
+	fmt.Println(string(data))
 	url := fmt.Sprintf("%s/api/%s/lights/%d/state", light.bridge.IP, light.bridge.Username, light.id)
 	data, err = request.PUT(url, data)
 	if err != nil {
